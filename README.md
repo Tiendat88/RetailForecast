@@ -1,70 +1,92 @@
-Dự án Dự đoán Số lượng Bán hàng Thương mại Điện tử
-Tổng quan
-Dự án này phân tích dữ liệu bán hàng từ bộ dữ liệu OnlineRetail.csv để xây dựng mô hình dự đoán số lượng sản phẩm (Quantity) bán ra. Mục tiêu là hỗ trợ đội ngũ Lập kế hoạch Bán hàng & Vận hành (S&OP) của một công ty thương mại điện tử trong việc chuẩn bị cho các đợt bán hàng cuối năm, quản lý kho hàng và đảm bảo giao hàng đúng hạn.
+Online Retail Sales Forecasting
+Overview
+This Jupyter notebook analyzes the OnlineRetail.csv dataset to build a forecasting model for predicting the quantity of products sold in an e-commerce setting. The analysis is performed using PySpark for data preprocessing and scikit-learn for building a linear regression model. The goal is to assist the Sales & Operations Planning (S&OP) team in planning for end-of-year sales by forecasting demand, managing inventory, and ensuring timely deliveries.
+Objectives
 
-Dự án bao gồm:
+Data Splitting: Split the dataset into training and test sets based on the date "2011-09-25". The training set includes data up to and including this date, while the test set includes data after it. The training set is returned as a pandas DataFrame (pd_daily_train_data) with columns Country, StockCode, InvoiceDate, and Quantity.
+Model Evaluation: Calculate the Mean Absolute Error (MAE) of the forecasting model for the Quantity sold using the test set.
+Weekly Forecast: Predict the total units sold during week 39 of 2011, stored as an integer (quantity_sold_w39).
 
-Chia dữ liệu thành tập huấn luyện và kiểm tra dựa trên ngày 25/09/2011.
-Xây dựng mô hình hồi quy tuyến tính để dự đoán số lượng bán ra và tính toán Sai số Tuyệt đối Trung bình (MAE).
-Dự đoán tổng số lượng sản phẩm bán ra trong tuần 39 năm 2011.
-Tính năng
-Tiền xử lý dữ liệu:
-Xóa các dòng thiếu CustomerID và Description.
-Loại bỏ các giao dịch có số lượng âm.
-Chuyển đổi cột InvoiceDate sang định dạng ngày.
-Mã hóa các cột Country và StockCode bằng LabelEncoder.
-Chia dữ liệu: Tách dữ liệu thành tập huấn luyện (trước và bao gồm 25/09/2011) và tập kiểm tra (sau 25/09/2011).
-Dự đoán: Sử dụng mô hình hồi quy tuyến tính để dự đoán số lượng bán ra.
-Đánh giá: Tính toán MAE trên tập kiểm tra.
-Dự báo: Ước tính số lượng sản phẩm bán ra trong tuần 39 năm 2011.
-Bộ dữ liệu
-File: OnlineRetail.csv
-Cột chính:
-InvoiceNo: Mã giao dịch (6 chữ số).
-StockCode: Mã sản phẩm (5 chữ số).
-Description: Tên sản phẩm.
-Quantity: Số lượng sản phẩm trong mỗi giao dịch.
-InvoiceDate: Ngày giờ giao dịch (MM/DD/YYYY).
-UnitPrice: Giá mỗi đơn vị sản phẩm.
-CustomerID: Mã khách hàng (5 chữ số).
-Country: Quốc gia của khách hàng.
-Kích thước: 541,909 dòng, 8 cột.
-Yêu cầu
-Để chạy dự án, cài đặt các gói Python sau:
+Features
 
-bash
+Data Preprocessing: Handles missing values, removes negative quantities, converts date formats, and encodes categorical variables (Country and StockCode).
+Data Analysis: Uses PySpark for efficient handling of large datasets and pandas for final data manipulation.
+Modeling: Employs a Linear Regression model to predict product quantities based on encoded Country and StockCode.
+Evaluation: Computes MAE to assess model performance.
+Forecasting: Aggregates quantities for specific weeks to support inventory planning.
 
-Sao chép
-pip install pyspark pandas numpy scikit-learn
-Lưu ý: Cần cài đặt Apache Spark để sử dụng PySpark. Hướng dẫn cài đặt Spark: Apache Spark Documentation.
+Prerequisites
+Ensure you have the following installed:
 
-Cài đặt
-Tải repository hoặc các file dự án.
-Đặt file OnlineRetail.csv vào thư mục dự án (hoặc cập nhật đường dẫn trong mã).
-Cài đặt các gói phụ thuộc được liệt kê ở phần Yêu cầu.
-Đảm bảo môi trường Spark được cấu hình đúng.
-Hướng dẫn sử dụng
-Mở file Jupyter Notebook final_hw_a39948.ipynb.
-Chạy lần lượt tất cả các ô mã để:
-Tải và tiền xử lý dữ liệu.
-Chia dữ liệu thành tập huấn luyện và kiểm tra.
-Mã hóa các cột Country và StockCode.
-Huấn luyện mô hình hồi quy tuyến tính.
-Tính toán MAE trên tập kiểm tra.
-Dự đoán số lượng bán ra trong tuần 39 năm 2011.
-Kết quả sẽ được in ra:
-pd_daily_train_data: DataFrame chứa dữ liệu huấn luyện.
-mae: Sai số tuyệt đối trung bình của mô hình.
-quantity_sold_w39: Tổng số lượng sản phẩm dự đoán bán ra trong tuần 39.
-Kết quả đầu ra
-DataFrame huấn luyện (pd_daily_train_data): Chứa các cột Country, StockCode, InvoiceDate, Quantity.
-MAE: Sai số tuyệt đối trung bình của mô hình trên tập kiểm tra (ví dụ: ~13.57).
-Số lượng bán ra tuần 39 (quantity_sold_w39): Tổng số lượng sản phẩm dự đoán (kiểm tra dữ liệu có thể cho kết quả 0 nếu không có giao dịch trong tuần 39).
-Hạn chế và Cải tiến
-Hạn chế:
-Mô hình hồi quy tuyến tính đơn giản, có thể không nắm bắt được các mẫu phức tạp trong dữ liệu.
-Dữ liệu tuần 39 có thể không đầy đủ, dẫn đến dự đoán không chính xác.
-Cải tiến:
-Sử dụng các mô hình phức tạp hơn như Random Forest hoặc LSTM để cải thiện độ chính xác.
-Thêm các đặc trưng thời gian (tuần, tháng, ngày trong tuần) vào mô hình.
-Kiểm tra và xử lý dữ liệu bất thường (outlier) kỹ hơn.
+Python 3.6 or higher
+Jupyter Notebook
+Libraries listed in requirements.txt
+Apache Spark (for PySpark)
+
+Installation
+
+Clone or download the repository.
+Install the required dependencies by running:pip install -r requirements.txt
+
+
+Ensure the dataset OnlineRetail.csv is available in the specified directory or update the file path in the notebook.
+Ensure Apache Spark is installed and configured for PySpark. Set up the Spark environment by configuring SPARK_HOME and adding it to your system path.
+
+Usage
+
+Open the Jupyter notebook:jupyter notebook final_hw_a39948.ipynb
+
+
+Run the cells sequentially to:
+Load and preprocess the OnlineRetail.csv dataset using PySpark.
+Split the data into training and test sets based on the date "2011-09-25".
+Encode categorical variables and train a Linear Regression model.
+Calculate the MAE for the test set predictions.
+Compute the total quantity sold for week 39 of 2011.
+
+
+Outputs include:
+pd_daily_train_data: A pandas DataFrame with the training set.
+mae: The Mean Absolute Error of the model's predictions.
+quantity_sold_w39: The total units sold in week 39 of 2011.
+
+
+
+Dataset
+The OnlineRetail.csv dataset contains e-commerce transaction data with the following columns:
+
+InvoiceNo: Unique 6-digit transaction ID.
+StockCode: Unique 5-digit product ID.
+Description: Product name.
+Quantity: Quantity of each product per transaction.
+UnitPrice: Price per unit.
+CustomerID: Unique 5-digit customer ID.
+Country: Customer's country.
+InvoiceDate: Transaction date and time.
+
+File Structure
+
+final_hw_a39948.ipynb: Jupyter notebook containing the analysis and forecasting logic.
+OnlineRetail.csv: Input dataset (not included; must be provided).
+requirements.txt: Lists required Python libraries.
+README.md: This documentation file.
+
+Dependencies
+See requirements.txt for the list of required Python libraries.
+Notes
+
+The dataset is cleaned by removing rows with missing CustomerID or Description and filtering out negative Quantity values.
+The InvoiceDate column is converted from string to date format for accurate splitting and analysis.
+The Linear Regression model uses encoded Country and StockCode as features, which may limit predictive power due to the simplicity of the model. Consider experimenting with additional features or more complex models (e.g., Random Forest, XGBoost) for better performance.
+The notebook checks for duplicate rows and finds none that are unreasonable, so all data is retained.
+The calculation for week 39 of 2011 may return zero if no data exists for that week in the test set. Nearby weeks (38 and 40) are checked for context.
+
+Troubleshooting
+
+Missing dataset: Ensure OnlineRetail.csv is in the correct directory or update the file path in the notebook.
+PySpark errors: Verify that Spark is installed and configured correctly. Check SPARK_HOME and Python compatibility.
+Zero quantity for week 39: This may occur if the test set lacks data for week 39. Verify the date range and week calculations.
+High MAE: The Linear Regression model may not capture complex patterns. Consider feature engineering or alternative models.
+
+License
+This project is for educational purposes and provided as-is without any warranty.
