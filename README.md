@@ -1,92 +1,177 @@
-Online Retail Sales Forecasting
-Overview
-This Jupyter notebook analyzes the OnlineRetail.csv dataset to build a forecasting model for predicting the quantity of products sold in an e-commerce setting. The analysis is performed using PySpark for data preprocessing and scikit-learn for building a linear regression model. The goal is to assist the Sales & Operations Planning (S&OP) team in planning for end-of-year sales by forecasting demand, managing inventory, and ensuring timely deliveries.
-Objectives
+# RetailForecast — Dự báo nhu cầu bán lẻ trực tuyến
 
-Data Splitting: Split the dataset into training and test sets based on the date "2011-09-25". The training set includes data up to and including this date, while the test set includes data after it. The training set is returned as a pandas DataFrame (pd_daily_train_data) with columns Country, StockCode, InvoiceDate, and Quantity.
-Model Evaluation: Calculate the Mean Absolute Error (MAE) of the forecasting model for the Quantity sold using the test set.
-Weekly Forecast: Predict the total units sold during week 39 of 2011, stored as an integer (quantity_sold_w39).
+Bài tập cuối kỳ môn Big Data: phân tích bộ dữ liệu giao dịch thương mại điện tử
+`OnlineRetail.csv` và xây dựng mô hình dự báo số lượng sản phẩm bán ra (`Quantity`),
+phục vụ cho đội **Sales & Operations Planning (S&OP)** lập kế hoạch tồn kho
+và khuyến mãi cuối năm.
 
-Features
+Xử lý dữ liệu bằng **PySpark**, huấn luyện mô hình bằng **scikit-learn**.
 
-Data Preprocessing: Handles missing values, removes negative quantities, converts date formats, and encodes categorical variables (Country and StockCode).
-Data Analysis: Uses PySpark for efficient handling of large datasets and pandas for final data manipulation.
-Modeling: Employs a Linear Regression model to predict product quantities based on encoded Country and StockCode.
-Evaluation: Computes MAE to assess model performance.
-Forecasting: Aggregates quantities for specific weeks to support inventory planning.
+---
 
-Prerequisites
-Ensure you have the following installed:
+## Đề bài
 
-Python 3.6 or higher
-Jupyter Notebook
-Libraries listed in requirements.txt
-Apache Spark (for PySpark)
+Notebook trả lời 3 câu hỏi:
 
-Installation
+| # | Yêu cầu | Biến kết quả |
+|---|---------|--------------|
+| 1 | Tách dữ liệu theo mốc `2011-09-25` (≤ ngày này là train, sau đó là test). Trả về pandas DataFrame gồm ít nhất các cột `Country`, `StockCode`, `InvoiceDate`, `Quantity` | `pd_daily_train_data` |
+| 2 | Tính **Mean Absolute Error (MAE)** của mô hình dự báo `Quantity` trên tập test | `mae` (float) |
+| 3 | Dự báo tổng số đơn vị bán ra trong **tuần 39 năm 2011** | `quantity_sold_w39` (int) |
 
-Clone or download the repository.
-Install the required dependencies by running:pip install -r requirements.txt
+## Kết quả hiện tại
 
+| Chỉ số | Giá trị |
+|--------|---------|
+| Số dòng gốc | 541,909 |
+| Số dòng sau khi làm sạch (train) | 257,815 |
+| MAE | **13.566** |
+| `quantity_sold_w39` | **0** (xem phần [Hạn chế đã biết](#hạn-chế-đã-biết)) |
+| Tổng lượng bán tuần 38 + 40 (đối chiếu) | 163,656 |
 
-Ensure the dataset OnlineRetail.csv is available in the specified directory or update the file path in the notebook.
-Ensure Apache Spark is installed and configured for PySpark. Set up the Spark environment by configuring SPARK_HOME and adding it to your system path.
+---
 
-Usage
+## Dữ liệu
 
-Open the Jupyter notebook:jupyter notebook final_hw_a39948.ipynb
+`OnlineRetail.csv` — **không có trong repo**, bạn cần tự chuẩn bị (bộ dữ liệu
+Online Retail của UCI Machine Learning Repository). File gồm 8 cột:
 
+| Cột | Mô tả |
+|-----|-------|
+| `InvoiceNo` | Mã hóa đơn, 6 chữ số, duy nhất theo giao dịch |
+| `StockCode` | Mã sản phẩm, 5 ký tự |
+| `Description` | Tên sản phẩm |
+| `Quantity` | Số lượng sản phẩm trong giao dịch |
+| `InvoiceDate` | Thời điểm giao dịch, định dạng chuỗi `M/d/yyyy H:mm` |
+| `UnitPrice` | Đơn giá |
+| `CustomerID` | Mã khách hàng, 5 chữ số |
+| `Country` | Quốc gia của khách hàng |
 
-Run the cells sequentially to:
-Load and preprocess the OnlineRetail.csv dataset using PySpark.
-Split the data into training and test sets based on the date "2011-09-25".
-Encode categorical variables and train a Linear Regression model.
-Calculate the MAE for the test set predictions.
-Compute the total quantity sold for week 39 of 2011.
+### Chất lượng dữ liệu
 
+Kiểm tra giá trị thiếu trên dữ liệu gốc:
 
-Outputs include:
-pd_daily_train_data: A pandas DataFrame with the training set.
-mae: The Mean Absolute Error of the model's predictions.
-quantity_sold_w39: The total units sold in week 39 of 2011.
+- `Description`: 1,454 dòng thiếu
+- `CustomerID`: 135,080 dòng thiếu
+- Các cột còn lại: đầy đủ
 
+Có một số dòng trùng lặp hoàn toàn, nhưng đều là các giao dịch hợp lý
+(cùng hóa đơn mua lặp một sản phẩm) nên **được giữ nguyên**.
 
+---
 
-Dataset
-The OnlineRetail.csv dataset contains e-commerce transaction data with the following columns:
+## Luồng xử lý
 
-InvoiceNo: Unique 6-digit transaction ID.
-StockCode: Unique 5-digit product ID.
-Description: Product name.
-Quantity: Quantity of each product per transaction.
-UnitPrice: Price per unit.
-CustomerID: Unique 5-digit customer ID.
-Country: Customer's country.
-InvoiceDate: Transaction date and time.
+1. **Đọc dữ liệu** — `SparkSession` đọc CSV với `inferSchema=True`.
+2. **Làm sạch** — `dropna` trên `Description` và `CustomerID`; kiểm tra lại còn 0 giá trị null.
+3. **Chuẩn hóa ngày** — `to_date("InvoiceDate", "M/d/yyyy H:mm")` đổi `string` → `date`.
+4. **Tách tập** — lọc theo `InvoiceDate <= "2011-09-25"` (train) và `> "2011-09-25"` (test),
+   chỉ giữ 4 cột `Country`, `StockCode`, `InvoiceDate`, `Quantity`, rồi `.toPandas()`.
+5. **Lọc trả hàng** — bỏ các dòng có `Quantity < 0` (đơn hủy/trả hàng).
+6. **Mã hóa đặc trưng** — `LabelEncoder` cho `Country` và `StockCode`.
+7. **Huấn luyện** — `LinearRegression` với 2 đặc trưng `Country_encoded`, `StockCode_encoded`.
+8. **Đánh giá** — `mean_absolute_error(y_test, y_pred)`.
+9. **Dự báo tuần 39** — lọc theo `dt.isocalendar().week == 39` và `dt.year == 2011`, cộng `Quantity`.
 
-File Structure
+---
 
-final_hw_a39948.ipynb: Jupyter notebook containing the analysis and forecasting logic.
-OnlineRetail.csv: Input dataset (not included; must be provided).
-requirements.txt: Lists required Python libraries.
-README.md: This documentation file.
+## Cấu trúc repo
 
-Dependencies
-See requirements.txt for the list of required Python libraries.
-Notes
+```
+.
+├── final_hw_a39948.ipynb   # Toàn bộ phân tích và mô hình
+├── requirements.txt        # Thư viện Python cần thiết
+├── README.md               # File này
+└── OnlineRetail.csv        # (không kèm theo — tự chuẩn bị)
+```
 
-The dataset is cleaned by removing rows with missing CustomerID or Description and filtering out negative Quantity values.
-The InvoiceDate column is converted from string to date format for accurate splitting and analysis.
-The Linear Regression model uses encoded Country and StockCode as features, which may limit predictive power due to the simplicity of the model. Consider experimenting with additional features or more complex models (e.g., Random Forest, XGBoost) for better performance.
-The notebook checks for duplicate rows and finds none that are unreasonable, so all data is retained.
-The calculation for week 39 of 2011 may return zero if no data exists for that week in the test set. Nearby weeks (38 and 40) are checked for context.
+---
 
-Troubleshooting
+## Cài đặt
 
-Missing dataset: Ensure OnlineRetail.csv is in the correct directory or update the file path in the notebook.
-PySpark errors: Verify that Spark is installed and configured correctly. Check SPARK_HOME and Python compatibility.
-Zero quantity for week 39: This may occur if the test set lacks data for week 39. Verify the date range and week calculations.
-High MAE: The Linear Regression model may not capture complex patterns. Consider feature engineering or alternative models.
+Yêu cầu: **Python 3.8+**, **Java 8/11/17** (bắt buộc cho Spark).
 
-License
-This project is for educational purposes and provided as-is without any warranty.
+```bash
+git clone https://github.com/Tiendat88/RetailForecast.git
+cd RetailForecast
+
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+pip install -r requirements.txt
+pip install jupyter
+```
+
+`requirements.txt` gồm: `pyspark`, `pandas`, `numpy`, `scikit-learn`.
+PySpark cài qua pip đã kèm sẵn Spark, **không cần** cài Apache Spark riêng —
+chỉ cần Java có trong `PATH` (kiểm tra bằng `java -version`).
+
+## Chạy
+
+```bash
+jupyter notebook final_hw_a39948.ipynb
+```
+
+> **Quan trọng:** sửa biến `file_path` ở cell đọc dữ liệu cho đúng máy bạn.
+> Notebook đang hard-code đường dẫn tuyệt đối của máy tác giả:
+>
+> ```python
+> file_path = "/Users/tiendat02/Documents/big-data/Final HW-Demand Forecasting/OnlineRetail.csv"
+> ```
+>
+> Nên đổi thành đường dẫn tương đối: `file_path = "OnlineRetail.csv"`.
+
+Chạy tuần tự các cell từ trên xuống.
+
+---
+
+## Hạn chế đã biết
+
+**1. Tập test đang bị gán nhầm bằng tập train.** Ở cell tạo `pd_daily_test_data`:
+
+```python
+pd_daily_test_data = train_df.toPandas()   # ❌ phải là test_df.toPandas()
+```
+
+Đây là nguyên nhân trực tiếp của hai vấn đề:
+
+- `mae = 13.566` thực chất là sai số **trên chính tập huấn luyện**, không phải
+  sai số ngoài mẫu — con số này lạc quan hơn thực tế.
+- `quantity_sold_w39 = 0` vì tuần 39/2011 (26/09 – 02/10) nằm **hoàn toàn sau**
+  mốc chia `2011-09-25`, nên không có dòng nào trong tập train rơi vào tuần đó.
+  Cell kiểm tra tuần 38 và 40 trả về 163,656 đơn vị, xác nhận dữ liệu vẫn còn —
+  chỉ là đang lọc nhầm tập.
+
+Sửa một dòng này sẽ cho MAE ngoài mẫu đúng nghĩa và một con số tuần 39 khác 0.
+
+**2. Mô hình quá đơn giản.** Hồi quy tuyến tính trên hai nhãn đã `LabelEncode`
+coi mã quốc gia/sản phẩm như biến liên tục có thứ tự, trong khi chúng chỉ là
+nhãn danh định — mô hình gần như không học được quan hệ có ý nghĩa. Hướng cải thiện:
+
+- Dùng one-hot encoding thay vì label encoding, hoặc mô hình cây
+  (Random Forest, XGBoost) vốn xử lý được biến danh định.
+- Thêm đặc trưng thời gian: tháng, tuần, thứ trong tuần, kỳ nghỉ lễ.
+- Tổng hợp dữ liệu theo ngày/sản phẩm rồi dùng mô hình chuỗi thời gian
+  (ARIMA, Prophet) — phù hợp hơn với bài toán dự báo nhu cầu.
+
+**3. `LabelEncoder.transform` sẽ lỗi với nhãn mới.** Sau khi sửa lỗi (1),
+nếu tập test chứa `StockCode` hoặc `Country` chưa từng xuất hiện trong train,
+`transform` ném `ValueError`. Cần lọc bỏ hoặc gán một mã "unknown" cho các nhãn này.
+
+---
+
+## Xử lý sự cố
+
+| Triệu chứng | Cách xử lý |
+|-------------|------------|
+| `FileNotFoundError` / `Path does not exist` | Sửa `file_path` trỏ đúng vị trí `OnlineRetail.csv` |
+| `JAVA_HOME is not set` | Cài JDK (8/11/17) và đặt biến môi trường `JAVA_HOME` |
+| `Py4JJavaError` khi khởi tạo Spark | Kiểm tra phiên bản Java tương thích với PySpark đang dùng |
+| Kết quả tuần 39 bằng 0 | Xem [Hạn chế đã biết](#hạn-chế-đã-biết) mục 1 |
+| MAE cao | Mô hình tuyến tính hạn chế — xem mục 2 |
+
+---
+
+## Giấy phép
+
+Dự án phục vụ mục đích học tập, cung cấp nguyên trạng, không kèm bảo đảm.
